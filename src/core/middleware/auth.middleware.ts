@@ -20,8 +20,8 @@ class AuthMiddleware {
             if (!token) {
                 return sendResponse(res, 401, 'token is required');
             }
-            const module_id: number = parseInt(req.header("module_id") as string);
-            const action: string = req.header("action") as string;
+            // const module_id: number = parseInt(req.header("module_id") as string);
+            // const action: string = req.header("action") as string;
             try {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
                 // console.log(decoded);
@@ -34,19 +34,19 @@ class AuthMiddleware {
                         return sendResponse(res, 423, errorMessages.USER_BLOCKED);
                     }
                     req.id = decoded.id;
-                    req.seller_id = check[0].seller_id;
-                    const getRole = await checkExist('user_role', 'user_id', decoded.id.toString());
-                    if (getRole == false) {
-                    } else {
-                        req.role_id = getRole[0].role_id;
-                    }
-                    if (isCheckPermission == true) {
-                        // const permissionService = new PermissionService();
-                        // const permission = await permissionService.checkPermissionUserId(decoded.id, module_id, action);
-                        // if (!permission) {
-                        //     return sendResponse(res, 403, errorMessages.PERMISSION_DENIED);
-                        // }
-                    }
+                    // req.seller_id = check[0].seller_id;
+                    // const getRole = await checkExist('user_role', 'user_id', decoded.id.toString());
+                    // if (getRole == false) {
+                    // } else {
+                    //     req.role_id = getRole[0].role_id;
+                    // }
+                    // if (isCheckPermission == true) {
+                    //     const permissionService = new PermissionService();
+                    //     const permission = await permissionService.checkPermissionUserId(decoded.id, module_id, action);
+                    //     if (!permission) {
+                    //         return sendResponse(res, 403, errorMessages.PERMISSION_DENIED);
+                    //     }
+                    // }
                     next();
                 } else {
                     return sendResponse(res, 403, 'invalid token');
