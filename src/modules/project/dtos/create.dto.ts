@@ -39,6 +39,5 @@ export class CreateProjectDto {
     currency!: string;
 
     @IsNotEmpty({ message: 'Thời gian dự kiến không được để trống' })
-    @IsInt({ message: 'Thời gian dự kiến phải là số nguyên' })
     duration!: number;
 }

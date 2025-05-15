@@ -26,7 +26,7 @@ class AuthMiddleware {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
                 // console.log(decoded);
                 if (decoded && typeof decoded === 'object' && 'id' in decoded) {
-                    const check = await checkExist('users', 'id', decoded.id.toString());
+                    const check = await checkExist('tbl_users', 'id', decoded.id.toString());
                     if (!check) {
                         return sendResponse(res, 401, 'user not found');
                     }

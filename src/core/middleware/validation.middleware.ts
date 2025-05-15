@@ -44,7 +44,7 @@ const errorMiddleware = (
                     };
                 });
 
-                return res.status(400).json({
+                return res.status(200).json({
                     statusCode: 400,
                     message: "Đã xảy ra lỗi",
                     errors: formattedErrors,

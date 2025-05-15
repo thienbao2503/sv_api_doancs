@@ -47,6 +47,8 @@ class Services {
             };
 
         } catch (error) {
+            console.log(error);
+
             return new HttpException(400, messages.REGISTER_FAILED);
         }
     }
