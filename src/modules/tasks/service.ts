@@ -10,7 +10,7 @@ import { RowDataPacket } from "mysql2";
 class Services {
     private tableName = 'tbl_tasks';
 
-    public search = async (query: { page?: number; limit?: number; name?: string; publish?: number, start_time?: Date, end_time?: Date, project_id?: number }) => {
+    public search = async (query: { page?: number; limit?: number; name?: string; publish?: number, start_time?: Date, end_time?: Date, project_id?: number }, user_id: number) => {
         try {
             const page = Number(query.page) || 1;
             const limit = Number(query.limit) || 10;
@@ -40,6 +40,9 @@ class Services {
                 whereClause += ' AND project_id = ?';
                 values.push(query.project_id);
             }
+
+            whereClause += ' AND p.user_id =?';
+            values.push(user_id);
 
             // Get total records for pagination
             const countQuery = `SELECT COUNT(*) as total FROM ${this.tableName} ${whereClause}`;

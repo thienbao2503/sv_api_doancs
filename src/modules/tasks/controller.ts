@@ -19,8 +19,9 @@ export default class Controller {
     }
     public search = async (req: Request, res: Response, next: NextFunction) => {
         const query = req.query;
+        const user_id = Number(req.id);
         try {
-            const result = await this.service.search(query);
+            const result = await this.service.search(query, user_id);
             if (result instanceof Error)
                 return sendResponse(res, result.status, result.message, null, result.field);
             return sendResponse(res, 200, messages.FIND_ALL_SUCCESS, result);
