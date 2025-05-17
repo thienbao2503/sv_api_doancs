@@ -14,6 +14,8 @@ export default class Route implements IRoute {
 
     constructor() {
         this.initializeRoutes();
+
+
     }
 
     private initializeRoutes() {
