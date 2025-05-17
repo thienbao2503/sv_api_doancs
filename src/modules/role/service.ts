@@ -40,12 +40,9 @@ class Services {
                 FROM ${this.tableName} 
                 ${whereClause}
                 ORDER BY created_at DESC
-                LIMIT ? OFFSET ?
+                LIMIT ${limit} OFFSET ${offset}
             `;
-            console.log(selectQuery);
 
-
-            values.push(limit, offset);
             const result = await database.executeQuery(selectQuery, values) as RowDataPacket[];
 
             if (result.length == 0) return new HttpException(400, messages.NOT_FOUND);
