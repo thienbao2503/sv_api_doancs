@@ -5,6 +5,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import { checkExist } from "@core/utils/checkExist";
 import messages from "@core/config/constants";
 import { IModal } from "./model";
+import { RowDataPacket } from "mysql2";
 
 
 
@@ -90,6 +91,57 @@ class Services {
         }
     }
 
+    public getUserById = async (id: number) => {
+        try {
+            const query = `
+                SELECT id, full_name, email, phone, active, created_at, updated_at
+                FROM ${this.tableName}
+                WHERE id = ?
+            `;
+            const result = await database.executeQuery(query, [id]) as RowDataPacket[];
+            if (result.length === 0) return new HttpException(400, messages.NOT_FOUND);
+            return {
+                data: result[0]
+            };
+        } catch (error) {
+            console.log(error);
+            return new HttpException(400, messages.NOT_FOUND);
+        }
+    }
+
+    public updateUser = async (id: number, model: Partial<IModal>) => {
+        try {
+            // Kiểm tra user tồn tại
+            const exist = await checkExist(this.tableName, 'id', id);
+            if (!exist) return new HttpException(400, messages.NOT_FOUND);
+
+            // Xây dựng câu truy vấn động
+            let query = `UPDATE ${this.tableName} SET `;
+            const values: any[] = [];
+            if (model.full_name) {
+                query += `full_name = ?, `;
+                values.push(model.full_name);
+            }
+            if (model.phone) {
+                query += `phone = ?, `;
+                values.push(model.phone);
+            }
+
+            // Xóa dấu phẩy cuối cùng
+            query = query.replace(/, $/, '');
+            query += `, updated_at = NOW() WHERE id = ?`;
+            values.push(id);
+
+            await database.executeQuery(query, values);
+
+            return {
+                message: 'Cập nhật tài khoản thành công',
+            };
+        } catch (error) {
+            console.log(error);
+            return new HttpException(400, messages.UPDATE_FAILED);
+        }
+    }
 }
 
 export default Services;
