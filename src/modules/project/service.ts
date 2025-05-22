@@ -45,7 +45,6 @@ class Services {
             const [countResult] = await database.executeQuery(countQuery, baseValues) as RowDataPacket[];
             const total = countResult?.total || 0;
 
-            // 2. SELECT query
             const selectQuery = `
                 SELECT DISTINCT 
                     p.id, p.name, p.description, p.user_id, p.start_date, p.end_date, 
@@ -65,7 +64,9 @@ class Services {
                         LEFT JOIN tbl_users u ON pt.user_id = u.id 
                         LEFT JOIN tbl_roles r ON pt.role_id = r.id 
                         WHERE pt.project_id = p.id 
-                    ) AS teams 
+                    ) AS teams,
+                    (SELECT COUNT(*) FROM tbl_tasks t WHERE t.project_id = p.id AND t.status = 1) AS total_doing,
+                    (SELECT COUNT(*) FROM tbl_tasks t WHERE t.project_id = p.id AND t.status = 2) AS total_done
                 FROM tbl_projects p 
                 ${whereClause} 
                 ORDER BY p.created_at DESC 

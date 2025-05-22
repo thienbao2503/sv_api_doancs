@@ -41,11 +41,13 @@ class Services {
                 values.push(query.project_id);
             }
 
-            whereClause += ' AND p.user_id =?';
-            values.push(user_id);
+            // whereClause += ' AND p.user_id =?';
+            whereClause += ` AND (p.user_id = ? OR p.id IN (SELECT project_id FROM tbl_project_team WHERE user_id = ?))`;
+
+            values.push(user_id, user_id);
 
             // Get total records for pagination
-            const countQuery = `SELECT COUNT(*) as total 
+            const countQuery = `SELECT COUNT(DISTINCT p.id) as total 
                 FROM ${this.tableName} t  
                 LEFT JOIN tbl_projects p ON t.project_id = p.id 
                 ${whereClause}`;
@@ -54,7 +56,7 @@ class Services {
 
             // Get records with pagination
             const selectQuery = `
-                SELECT t.id, t.name,p.name as project_name ,t.project_id, t.description, t.priority, t.status, t.start_time, t.end_time, t.publish, t.created_at, t.updated_at ,
+                SELECT DISTINCT t.id, t.name,p.name as project_name ,t.project_id, t.description, t.priority, t.status, t.start_time, t.end_time, t.publish, t.created_at, t.updated_at ,
                 (
                     SELECT JSON_ARRAYAGG(ta.user_id) 
                     FROM tbl_task_assignees ta 
@@ -67,11 +69,7 @@ class Services {
                 LIMIT ${limit} OFFSET ${offset} 
             `;
 
-            console.log(selectQuery, values);
-
             const result = await database.executeQuery(selectQuery, values) as RowDataPacket[];
-
-            if (result.length == 0) return new HttpException(400, messages.NOT_FOUND);
 
             return {
                 data: result,
