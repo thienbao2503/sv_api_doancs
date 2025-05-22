@@ -62,7 +62,7 @@ class Services {
 
             // 2. Kiểm tra mật khẩu
             const isValidPassword = await bcryptjs.compare(model.password, user.password);
-            if (!isValidPassword) return new HttpException(400, messages.PASSWORD_INCORRECT);
+            if (!isValidPassword) return new HttpException(400, messages.PASSWORD_INCORRECT, "password");
 
             // 3. Tạo accessToken và refreshToken
             const accessToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: process.env.JWT_EXPIRES_IN });

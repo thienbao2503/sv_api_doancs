@@ -45,7 +45,10 @@ class Services {
             values.push(user_id);
 
             // Get total records for pagination
-            const countQuery = `SELECT COUNT(*) as total FROM ${this.tableName} ${whereClause}`;
+            const countQuery = `SELECT COUNT(*) as total 
+                FROM ${this.tableName} t  
+                LEFT JOIN tbl_projects p ON t.project_id = p.id 
+                ${whereClause}`;
             const [totalResult] = await database.executeQuery(countQuery, values) as RowDataPacket[];
             const total = totalResult.total;
 

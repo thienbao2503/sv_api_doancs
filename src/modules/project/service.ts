@@ -35,19 +35,21 @@ class Services {
                 baseValues.push(query.status);
             }
 
-            whereClause += ' AND p.user_id = ?';
-            baseValues.push(user_id);
+            whereClause += ` AND (p.user_id = ? OR p.id IN (SELECT project_id FROM tbl_project_team WHERE user_id = ?))`;
+            baseValues.push(user_id, user_id);
 
             // 1. COUNT query
+            // COUNT query
             const countQuery = `SELECT COUNT(DISTINCT p.id) as total FROM ${this.tableName} p ${whereClause}`;
 
-            const [countResult] = await database.executeQuery(countQuery, [...baseValues]) as RowDataPacket[];
+            const [countResult] = await database.executeQuery(countQuery, baseValues) as RowDataPacket[];
             const total = countResult?.total || 0;
 
             // 2. SELECT query
             const selectQuery = `
-                SELECT 
-                    p.id, p.name, p.description, p.user_id, p.start_date, p.end_date,  
+                SELECT DISTINCT 
+                    p.id, p.name, p.description, p.user_id, p.start_date, p.end_date, 
+                    (p.user_id = ${user_id}) as isMe,  
                     p.status, p.created_at, p.updated_at, 
                     (
                         SELECT JSON_ARRAYAGG(
@@ -69,12 +71,6 @@ class Services {
                 ORDER BY p.created_at DESC 
                 LIMIT ${limit} OFFSET ${offset} 
             `;
-
-            // const selectValues = [...baseValues, limit, offset];
-
-            // Debug (nếu cần)
-            // console.log('SQL:', selectQuery);
-            // console.log('VALUES:', selectValues);
 
             const result = await database.executeQuery(selectQuery, baseValues) as RowDataPacket[];
 
