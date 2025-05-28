@@ -126,6 +126,10 @@ class Services {
                 query += `phone = ?, `;
                 values.push(model.phone);
             }
+            if (model.email) {
+                query += `email =?, `;
+                values.push(model.email);
+            }
 
             // Xóa dấu phẩy cuối cùng
             query = query.replace(/, $/, '');
@@ -137,6 +141,33 @@ class Services {
             return {
                 message: 'Cập nhật tài khoản thành công',
             };
+        } catch (error) {
+            console.log(error);
+            return new HttpException(400, messages.UPDATE_FAILED);
+        }
+    }
+
+    public changePassword = async (id: number, model: any) => {
+        try {
+            // Kiểm tra user tồn tại
+            const exist = await checkExist(this.tableName, 'id', id);
+            if (!exist) return new HttpException(400, messages.NOT_FOUND);
+            // Kiểm tra mật khẩu cũ
+            const user = (await checkExist(this.tableName, 'id', id))[0];
+            const isValidPassword = await bcryptjs.compare(model.old_password, user.password);
+            if (!isValidPassword) return new HttpException(400, messages.PASSWORD_INCORRECT, "password");
+            // Mã hóa mật khẩu mới
+            const hashedPassword = await bcryptjs.hash(model.new_password, 10);
+            // Cập nhật mật khẩu mới
+            const query = `
+                UPDATE ${this.tableName}
+                SET password =?, updated_at = NOW()
+                WHERE id =?
+            `;
+            await database.executeQuery(query, [hashedPassword, id]);
+            return {
+                message: 'Cập nhật mật khẩu thành công',
+            }
         } catch (error) {
             console.log(error);
             return new HttpException(400, messages.UPDATE_FAILED);

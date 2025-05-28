@@ -5,6 +5,7 @@ import Controller from "./controller";
 import { RegisterDto } from "./dtos/register.dto";
 import { LoginDto } from "./dtos/login.dto";
 import { UpdateDto } from "./dtos/update.dto";
+import { UpdatePasswordDto } from "./dtos/updatePassword.dto";
 
 export default class Route implements IRoute {
     public path = '/auth';
@@ -21,5 +22,6 @@ export default class Route implements IRoute {
         this.router.post(this.path + '/login', errorMiddleware(LoginDto, 'body'), this.controller.login);
         this.router.get(this.path + '/profile', AuthMiddleware.authorization(), this.controller.getProfile);
         this.router.patch(this.path + '/profile', errorMiddleware(UpdateDto, "body"), AuthMiddleware.authorization(), this.controller.updateProfile);
+        this.router.patch(this.path + '/change-password', errorMiddleware(UpdatePasswordDto, "body"), AuthMiddleware.authorization(), this.controller.changePassword);
     }
 }

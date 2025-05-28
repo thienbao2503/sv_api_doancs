@@ -53,4 +53,17 @@ export default class Controller {
             next(error);
         }
     }
+
+    public changePassword = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const userId = req.id
+            const model = req.body;
+            const result = await this.service.changePassword(Number(userId), model);
+            if (result instanceof Error)
+                return sendResponse(res, result.status, result.message, null, result.field);
+            return sendResponse(res, 200, messages.UPDATE_SUCCESS, result);
+        } catch (error) {
+            next(error);
+        }
+    }
 }

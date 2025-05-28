@@ -11,6 +11,10 @@ export class UpdateDto {
     @Matches(/^(0|\+84)[0-9]{9,10}$/, { message: 'Số điện thoại không hợp lệ' })
     phone!: string;
 
+    @IsNotEmpty({ message: 'Email không được để trống' })
+    @IsEmail({}, { message: 'Email không hợp lệ' })
+    email!: string;
+
     @IsNotEmpty({ message: 'Họ tên không được để trống' })
     @IsString({ message: 'Họ tên phải là chuỗi ký tự' })
     @Length(2, 255, { message: 'Họ tên phải từ 2 đến 255 ký tự' })

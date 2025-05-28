@@ -16,9 +16,9 @@ export default class Route implements IRoute {
         this.initializeRoutes();
     }
     private initializeRoutes() {
-        this.router.post(this.path + '/', errorMiddleware(CreateDto, 'body'), this.controller.create);
+        this.router.post(this.path + '/', AuthMiddleware.authorization(), AuthMiddleware.checkRole('TASK', 'CREATE'), errorMiddleware(CreateDto, 'body'), this.controller.create);
         this.router.get(this.path + '/', AuthMiddleware.authorization(), this.controller.search);
-        this.router.patch(this.path + '/:id', this.controller.update);
-        this.router.delete(this.path + '/:id', this.controller.delete);
+        this.router.patch(this.path + '/:id', AuthMiddleware.authorization(), AuthMiddleware.checkRole('TASK', 'UPDATE'), this.controller.update);
+        this.router.delete(this.path + '/:id', AuthMiddleware.authorization(), this.controller.delete);
     }
 }

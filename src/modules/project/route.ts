@@ -20,13 +20,13 @@ export default class Route implements IRoute {
 
     private initializeRoutes() {
         this.router.get(this.path + '/team', AuthMiddleware.authorization(), this.controller.getTeam);
-        this.router.post(this.path + '/team/add-user/:id', errorMiddleware(AddUserDto, 'body'), AuthMiddleware.authorization(), this.controller.addUser);
-        this.router.put(this.path + '/team/update-role/:id', errorMiddleware(UpdateRoleDto, 'body'), AuthMiddleware.authorization(), this.controller.updateRole);
-        this.router.delete(this.path + '/team/:id', errorMiddleware(DeleteUserDto, 'body'), AuthMiddleware.authorization(), this.controller.deleteUser);
+        this.router.post(this.path + '/team/add-user/:id', AuthMiddleware.authorization(), AuthMiddleware.checkRole('PROJECT', 'UPDATE'), errorMiddleware(AddUserDto, 'body'), this.controller.addUser);
+        this.router.put(this.path + '/team/update-role/:id', AuthMiddleware.authorization(), AuthMiddleware.checkRole('PROJECT', 'UPDATE'), errorMiddleware(UpdateRoleDto, 'body'), this.controller.updateRole);
+        this.router.delete(this.path + '/team/:id', AuthMiddleware.authorization(), AuthMiddleware.checkRole('PROJECT', 'UPDATE'), errorMiddleware(DeleteUserDto, 'body'), this.controller.deleteUser);
         this.router.post(this.path + '/', errorMiddleware(CreateProjectDto, 'body'), AuthMiddleware.authorization(), this.controller.create);
         this.router.get(this.path + '/:id', AuthMiddleware.authorization(), this.controller.getById);
-        this.router.patch(this.path + '/:id', errorMiddleware(UpdateProjectDto, 'body'), AuthMiddleware.authorization(), this.controller.update);
-        this.router.delete(this.path + '/:id', AuthMiddleware.authorization(), this.controller.delete);
+        this.router.patch(this.path + '/:id', AuthMiddleware.authorization(), AuthMiddleware.checkRole("PROJECT", "UPDATE"), errorMiddleware(UpdateProjectDto, 'body'), this.controller.update);
+        // this.router.delete(this.path + '/:id', AuthMiddleware.authorization(), AuthMiddleware.checkRole("PROJECT", "UPDATE"), this.controller.delete);
         this.router.get(this.path + '/', AuthMiddleware.authorization(), this.controller.search);
 
     }

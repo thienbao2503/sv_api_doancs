@@ -73,8 +73,8 @@ class Services {
     public create = async (model: IModal, user_id: number) => {
         try {
             // 1. Check if role name exists
-            const exist = await checkExist(this.tableName, 'name', model.name);
-            if (exist) return new HttpException(400, messages.NAME_EXISTED, 'name');
+            // const exist = await checkExist(this.tableName, 'name', model.name);
+            // if (exist) return new HttpException(400, messages.NAME_EXISTED, 'name');
 
             // 2. Create new role
             const queryInsert = `
@@ -93,21 +93,31 @@ class Services {
 
             const valunConfig = [
                 {
-                    type: 'READ',
-                    isAllowed: 0
+                    "module": "PROJECT",
+                    "permission": [
+                        {
+                            "type": "CREATE",
+                            "isAllowed": 0
+                        },
+                        {
+                            "type": "UPDATE",
+                            "isAllowed": 0
+                        },
+                    ]
                 },
                 {
-                    type: 'CREATE',
-                    isAllowed: 0
-                },
-                {
-                    type: 'UPDATE',
-                    isAllowed: 0
-                },
-                {
-                    type: 'DELETE',
-                    isAllowed: 0
-                },
+                    "module": "TASK",
+                    "permission": [
+                        {
+                            "type": "CREATE",
+                            "isAllowed": 0
+                        },
+                        {
+                            "type": "UPDATE",
+                            "isAllowed": 0
+                        },
+                    ]
+                }
             ]
             const insertConfig = `
                 INSERT INTO tbl_role_config (role_id, value, created_at)
