@@ -50,6 +50,7 @@ class Services {
                     p.id, p.name, p.description, p.user_id, p.start_date, p.end_date, 
                     (p.user_id = ${user_id}) as isMe,  
                     p.status, p.created_at, p.updated_at, 
+                    p.category_id, c.name as category_name, 
                     (
                         SELECT JSON_ARRAYAGG(
                             JSON_OBJECT(
@@ -68,6 +69,7 @@ class Services {
                     (SELECT COUNT(*) FROM tbl_tasks t WHERE t.project_id = p.id AND t.status = 1) AS total_doing,
                     (SELECT COUNT(*) FROM tbl_tasks t WHERE t.project_id = p.id AND t.status = 2) AS total_done
                 FROM tbl_projects p 
+                LEFT JOIN tbl_project_categories c ON p.category_id = c.id 
                 ${whereClause} 
                 ORDER BY p.created_at DESC 
                 LIMIT ${limit} OFFSET ${offset} 
@@ -102,9 +104,10 @@ class Services {
         try {
             const query = `
                 SELECT p.id, p.name, p.description, p.user_id, p.start_date, p.end_date, p.status, p.created_at, p.updated_at, 
-                pr.goal, pr.budget, pr.currency, pr.duration 
+                pr.goal, pr.budget, pr.currency, pr.duration p.category_id, c.name as category_name 
                 FROM ${this.tableName} p 
                 LEFT JOIN tbl_project_requests pr ON p.id = pr.project_id 
+                LEFT JOIN tbl_project_categories c ON p.category_id = c.id 
                 WHERE p.id =?
             `;
             const result = await database.executeQuery(query, [id]) as RowDataPacket[];
@@ -139,8 +142,8 @@ class Services {
             // 2. Create new project
             const queryProject = `
                 INSERT INTO ${this.tableName} 
-                (name, description, user_id, start_date, end_date, status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+                (name, description, user_id, start_date, end_date, status, category_id,created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) 
             `;
 
             const projectValues = [
@@ -150,6 +153,7 @@ class Services {
                 model.start_date,
                 model.end_date,
                 model.status || 1,
+                model.category_id,
             ];
 
             const result = await database.executeQuery(queryProject, projectValues) as RowDataPacket[0];
@@ -217,6 +221,11 @@ class Services {
             if (model.status !== undefined) {
                 setProject.push('status = ?');
                 valuesProject.push(model.status);
+            }
+
+            if (model.category_id !== undefined) {
+                setProject.push('category_id = ?');
+                valuesProject.push(model.category_id);
             }
 
             if (setProject.length > 0) {

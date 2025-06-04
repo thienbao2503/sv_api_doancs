@@ -7,6 +7,7 @@ import 'reflect-metadata';
 import { RolesRoute } from "@modules/role";
 import { ProjectsRoute } from "@modules/project";
 import { TasksRoute } from "@modules/tasks";
+import { ProjectCategoryRoute } from "@modules/project_category";
 
 
 const routes = [
@@ -14,7 +15,8 @@ const routes = [
     new AuthRoute(),
     new RolesRoute(),
     new ProjectsRoute(),
-    new TasksRoute()
+    new TasksRoute(),
+    new ProjectCategoryRoute()
 ];
 const app = new App(routes);
 

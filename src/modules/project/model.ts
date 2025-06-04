@@ -10,6 +10,7 @@ export interface IModal {
     budget: number;
     currency: string;   // ví dụ: 'VND', 'USD'
     duration: number;   // thời gian dự kiến tính theo ngày
+    category_id: number;
     created_at?: Date;
     updated_at?: Date;
 }
