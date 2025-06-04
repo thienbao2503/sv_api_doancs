@@ -4,9 +4,6 @@ import { AuthMiddleware, errorMiddleware } from "@core/middleware";
 import Controller from "./controller";
 import { CreateProjectDto } from "./dtos/create.dto";
 import { UpdateProjectDto } from "./dtos/update.dto";
-import { AddUserDto } from "./dtos/addUser.dto";
-import { UpdateRoleDto } from "./dtos/updateRole.dto";
-import { DeleteUserDto } from "./dtos/deleteUser.dto";
 
 export default class Route implements IRoute {
     public path = '/projects';
@@ -19,10 +16,7 @@ export default class Route implements IRoute {
     }
 
     private initializeRoutes() {
-        this.router.get(this.path + '/team', AuthMiddleware.authorization(), this.controller.getTeam);
-        this.router.post(this.path + '/team/add-user/:id', AuthMiddleware.authorization(), AuthMiddleware.checkRole('PROJECT', 'UPDATE'), errorMiddleware(AddUserDto, 'body'), this.controller.addUser);
-        this.router.put(this.path + '/team/update-role/:id', AuthMiddleware.authorization(), AuthMiddleware.checkRole('PROJECT', 'UPDATE'), errorMiddleware(UpdateRoleDto, 'body'), this.controller.updateRole);
-        this.router.delete(this.path + '/team/:id', AuthMiddleware.authorization(), AuthMiddleware.checkRole('PROJECT', 'UPDATE'), errorMiddleware(DeleteUserDto, 'body'), this.controller.deleteUser);
+
         this.router.post(this.path + '/', errorMiddleware(CreateProjectDto, 'body'), AuthMiddleware.authorization(), this.controller.create);
         this.router.get(this.path + '/:id', AuthMiddleware.authorization(), this.controller.getById);
         this.router.patch(this.path + '/:id', AuthMiddleware.authorization(), AuthMiddleware.checkRole("PROJECT", "UPDATE"), errorMiddleware(UpdateProjectDto, 'body'), this.controller.update);

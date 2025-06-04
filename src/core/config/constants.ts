@@ -125,6 +125,7 @@ const messages = {
     CHANGE_PASSWORD_SUCCESS: "Thay đổi mật khẩu thành công",
     REFRESH_TOKEN_SUCCESS: "Refresh token thành công",
     USER_BLOCKED: "Tài khoản đã bị khóa",
+    NOT_ALLOW_EDIT: "Không được phép chỉnh sửa",
 
     //cccd
     INVALID_CCCD: "CCCD không hợp lệ",
@@ -355,6 +356,10 @@ const messages = {
     PURCHASE_LIST_STATUS_UPDATE_INVALID: "Danh sách không hợp lệ, vui lòng chọn lại",
     PURCHASE_LIST_STATUS_COMPLETE_INVALID: "Danh sách không hợp lệ, chỉ hoàn thành với những đơn hàng ở trạng thái nhập hàng đã thanh toán",
     UPDATE_STATUS_PAYMENT_FAILED: "Cập nhật trạng thái thanh toán thất bại",
+}
+
+const DEFAULT_TASK = {
+
 }
 
 export default messages;

@@ -6,10 +6,11 @@ import messages from "@core/config/constants";
 export default class Controller {
     public service = new Services();
     public create = async (req: Request, res: Response, next: NextFunction) => {
-        const model = req.body;
-        const user_id = req.id as number;
+        const { email, role_id } = req.body;
+        const created_id = Number(req.id);
+
         try {
-            const result = await this.service.create(model, user_id);
+            const result = await this.service.create(email, role_id, created_id);
             if (result instanceof Error)
                 return sendResponse(res, result.status, result.message, null, result.field);
             return sendResponse(res, 200, messages.CREATE_SUCCESS, result);
@@ -17,23 +18,11 @@ export default class Controller {
             next(error);
         }
     }
-    // get by id
-    public getById = async (req: Request, res: Response, next: NextFunction) => {
-        const id = Number(req.params.id);
-        try {
-            const result = await this.service.getById(id);
-            if (result instanceof Error)
-                return sendResponse(res, result.status, result.message, null, result.field);
-            return sendResponse(res, 200, messages.FIND_ALL_SUCCESS, result);
-        } catch (error) {
-            next(error);
-        }
-    }
     public update = async (req: Request, res: Response, next: NextFunction) => {
-        const model = req.body;
+        const { role_id } = req.body;
         const id = Number(req.params.id);
         try {
-            const result = await this.service.update(model, id);
+            const result = await this.service.update(role_id, id);
             if (result instanceof Error)
                 return sendResponse(res, result.status, result.message, null, result.field);
             return sendResponse(res, 200, messages.UPDATE_SUCCESS, result);
@@ -41,7 +30,6 @@ export default class Controller {
             next(error);
         }
     }
-
     public delete = async (req: Request, res: Response, next: NextFunction) => {
         const id = Number(req.params.id);
         try {
@@ -53,17 +41,21 @@ export default class Controller {
             next(error);
         }
     }
+
     public search = async (req: Request, res: Response, next: NextFunction) => {
-        const query = req.query;
-        const user_id = req.id as number;
         try {
-            const result = await this.service.search(query, user_id);
-            if (result instanceof Error)
+            const created_id = Number(req.id);
+            const query = req.query as { page?: number, limit?: number, search?: string, role_id?: number };
+
+            const result = await this.service.search(created_id, query);
+
+            if (result instanceof Error) {
                 return sendResponse(res, result.status, result.message, null, result.field);
+            }
+
             return sendResponse(res, 200, messages.FIND_ALL_SUCCESS, result);
         } catch (error) {
             next(error);
         }
     }
-
 }

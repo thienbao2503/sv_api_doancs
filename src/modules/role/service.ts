@@ -26,7 +26,7 @@ class Services {
                 whereClause += ` AND publish = ${query.publish}`;
             }
 
-            whereClause += ` AND user_id = ${user_id}`;
+            whereClause += ` AND (isDefault = 1 OR user_id = ${user_id})`;
 
 
             // Get total records for pagination
@@ -138,9 +138,12 @@ class Services {
     public update = async (id: number, model: IModal) => {
         try {
             // Kiểm tra tồn tại vai trò với id và user_id
-            const checkQuery = `SELECT id FROM ${this.tableName} WHERE id = ?`;
+            const checkQuery = `SELECT id,isDefault FROM ${this.tableName} WHERE id = ?`;
             const checkResult = await database.executeQuery(checkQuery, [id]) as RowDataPacket[];
             if (checkResult.length === 0) return new HttpException(400, messages.NOT_FOUND);
+            console.log("checkResult", checkResult);
+
+            if (checkResult[0].isDefault === 1) return new HttpException(400, messages.NOT_ALLOW_EDIT);
 
             // Kiểm tra trùng tên (nếu tên thay đổi)
             if (model.name) {
