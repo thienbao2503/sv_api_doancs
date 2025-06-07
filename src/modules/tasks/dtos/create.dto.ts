@@ -36,7 +36,7 @@ export class CreateDto {
     end_time?: string;
 
     @IsOptional()
-    userIDs?: number[];
+    roleIDs?: number[];
 
 
 

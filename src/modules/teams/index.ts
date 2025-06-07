@@ -1,5 +1,5 @@
-import RolesRoute from "./route"
+import TeamsRoute from "./route"
 // comment
 export {
-    RolesRoute
+    TeamsRoute
 }

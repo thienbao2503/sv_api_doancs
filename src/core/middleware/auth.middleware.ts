@@ -2,9 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { sendResponse } from '@core/utils';
 import { checkExist } from '@core/utils/checkExist';
-import errorMessages from '@core/config/constants';
+import errorMessages, { PERMISSION_TYPE } from '@core/config/constants';
 import database from '@core/config/database';
 import { RowDataPacket } from 'mysql2';
+import { ne } from '@faker-js/faker';
 
 class AuthMiddleware {
     public static authorization(isCheckPermission?: boolean) {
@@ -67,7 +68,7 @@ class AuthMiddleware {
         next()
     }
 
-    public static checkRole = (module_name: string, action: string) => {
+    public static checkRole = (action: string) => {
         return async (req: Request, res: Response, next: NextFunction) => {
             const project_id = req.header('project_id') as string;
             const user_id = req.id;
@@ -75,17 +76,19 @@ class AuthMiddleware {
             if (!user_id) return sendResponse(res, 400, 'Bạn không có quyền thực hiện thay đổi này', null, 'user_id');
 
             const checkQuery = `
-                SELECT rc.value 
-                FROM tbl_project_team pt 
+                SELECT rc.value ,
+                pt.user_id 
+                FROM tbl_projects p 
+                LEFT JOIN tbl_project_team pt ON pt.created_id = p.user_id AND pt.user_id = ${user_id} 
                 LEFT JOIN tbl_role_config rc ON pt.role_id = rc.role_id 
-                WHERE pt.project_id = ${project_id} AND pt.user_id = ${user_id} 
+                WHERE p.id = ${project_id} 
             `
             const check = await database.executeQuery(checkQuery) as RowDataPacket;
-            if (check.length == 0) next()
+
+            if (check.length == 0 || check[0].value == null) next()
             else {
                 const valueRoleConfig = JSON.parse(check[0].value) as any[];
-                const permission = valueRoleConfig.find(p => p.module == module_name).permission as any[];
-                const actionPermission = Number(permission.find(p => p.type == action).isAllowed) as number;
+                const actionPermission = Number(valueRoleConfig?.find(p => p.type == action).isAllowed) as number;
                 if (actionPermission == 1) {
                     next()
                 } else {

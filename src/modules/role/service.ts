@@ -1,7 +1,7 @@
 import { HttpException } from "@core/exceptions";
 import database from "@core/config/database";
 import { checkExist } from "@core/utils/checkExist";
-import messages from "@core/config/constants";
+import messages, { PERMISSION_TYPE } from "@core/config/constants";
 import { IModal } from "./model";
 import { RowDataPacket } from "mysql2";
 
@@ -26,11 +26,13 @@ class Services {
                 whereClause += ` AND publish = ${query.publish}`;
             }
 
-            whereClause += ` AND (isDefault = 1 OR user_id = ${user_id})`;
+            whereClause += ` AND (r.isDefault = 1 OR r.user_id = ${user_id}) AND rc.created_id = ${user_id}`;
 
 
             // Get total records for pagination
-            const countQuery = `SELECT COUNT(*) as total FROM ${this.tableName} ${whereClause}`;
+            const countQuery = `SELECT COUNT(*) as total FROM ${this.tableName} r 
+                LEFT JOIN tbl_role_config rc ON r.id = rc.role_id 
+            ${whereClause}`;
             console.log(countQuery);
 
             const [totalResult] = await database.executeQuery(countQuery) as RowDataPacket[];
@@ -38,7 +40,7 @@ class Services {
 
             // Get records with pagination
             const selectQuery = `
-                SELECT r.id, r.name, r.publish, value, r.created_at, r.updated_at 
+                SELECT r.id, r.name, r.publish, rc.value, r.created_at, r.updated_at 
                 FROM ${this.tableName} r 
                 LEFT JOIN tbl_role_config rc ON r.id = rc.role_id 
                 ${whereClause} 
@@ -46,7 +48,6 @@ class Services {
                 LIMIT ${limit} OFFSET ${offset} 
             `;
 
-            console.log(selectQuery);
 
 
             const result = await database.executeQuery(selectQuery) as RowDataPacket[];
@@ -92,38 +93,18 @@ class Services {
             const res = await database.executeQuery(queryInsert, values) as RowDataPacket;
 
             const valunConfig = [
-                {
-                    "module": "PROJECT",
-                    "permission": [
-                        {
-                            "type": "CREATE",
-                            "isAllowed": 0
-                        },
-                        {
-                            "type": "UPDATE",
-                            "isAllowed": 0
-                        },
-                    ]
-                },
-                {
-                    "module": "TASK",
-                    "permission": [
-                        {
-                            "type": "CREATE",
-                            "isAllowed": 0
-                        },
-                        {
-                            "type": "UPDATE",
-                            "isAllowed": 0
-                        },
-                    ]
-                }
+                { type: PERMISSION_TYPE.CREATE, isAllowed: 0 },
+                { type: PERMISSION_TYPE.UPDATE_INFO, isAllowed: 0 },
+                { type: PERMISSION_TYPE.UPDATE_PROJECT_INFO, isAllowed: 0 },
+                { type: PERMISSION_TYPE.UPDATE_PROGRESS, isAllowed: 0 },
+                { type: PERMISSION_TYPE.CONFIRM_RESULT, isAllowed: 0 },
+                { type: PERMISSION_TYPE.ASSIGN, isAllowed: 0 },
             ]
             const insertConfig = `
-                INSERT INTO tbl_role_config (role_id, value, created_at)
-                VALUES (?, ?, NOW())
+                INSERT INTO tbl_role_config (role_id, created_id, value, created_at)
+                VALUES (?, ?, ?, NOW())
             `;
-            await database.executeQuery(insertConfig, [res.insertId, JSON.stringify(valunConfig)]) as RowDataPacket;
+            await database.executeQuery(insertConfig, [res.insertId, user_id, JSON.stringify(valunConfig)]) as RowDataPacket;
             return {
                 message: messages.CREATE_SUCCESS,
             };

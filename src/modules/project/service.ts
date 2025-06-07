@@ -1,7 +1,7 @@
 import { HttpException } from "@core/exceptions";
 import database from "@core/config/database";
 import { checkExist } from "@core/utils/checkExist";
-import messages from "@core/config/constants";
+import messages, { defaultTasksByKey } from "@core/config/constants";
 import { IModal } from "./model";
 import { RowDataPacket } from "mysql2";
 
@@ -10,8 +10,7 @@ import { RowDataPacket } from "mysql2";
 class Services {
     private tableName = 'tbl_projects';
 
-    // Search for projects
-    // Search for projects
+
     public search = async (
         query: { page?: number; limit?: number; name?: string; status?: number },
         user_id: number
@@ -35,9 +34,17 @@ class Services {
                 baseValues.push(query.status);
             }
 
-            whereClause += ` AND (p.user_id = ? OR p.id IN (SELECT project_id FROM tbl_project_team WHERE user_id = ?))`;
-            baseValues.push(user_id, user_id);
-
+            // whereClause += ` AND (p.user_id = ? OR p.id IN (SELECT project_id FROM tbl_project_team WHERE user_id = ?))`;
+            whereClause += ` AND (
+                p.user_id = ${user_id} 
+                OR p.id IN (
+                        SELECT t.project_id 
+                        FROM tbl_project_team pt 
+                        LEFT JOIN tbl_task_assignees ta ON pt.role_id = ta.role_id 
+                        LEFT JOIN tbl_tasks t ON ta.task_id = t.id 
+                        WHERE pt.user_id = ${user_id} 
+                    )
+                )`;
             // 1. COUNT query
             // COUNT query
             const countQuery = `SELECT COUNT(DISTINCT p.id) as total FROM ${this.tableName} p ${whereClause}`;
@@ -45,31 +52,47 @@ class Services {
             const [countResult] = await database.executeQuery(countQuery, baseValues) as RowDataPacket[];
             const total = countResult?.total || 0;
 
+            // const selectQuery = `
+            //     SELECT DISTINCT 
+            //         p.id, p.name, p.description, p.user_id, p.start_date, p.end_date, 
+            //         (p.user_id = ${user_id}) as isMe,  
+            //         p.status, p.created_at, p.updated_at, 
+            //         p.category_id, c.name as category_name, 
+            //         (
+            //             SELECT JSON_ARRAYAGG(
+            //                 JSON_OBJECT(
+            //                     'user_id', pt.user_id,
+            //                     'full_name', u.full_name,
+            //                     'email', u.email,
+            //                     'role_id', pt.role_id,
+            //                     'role_name', r.name
+            //                 )
+            //             )
+            //             FROM tbl_project_team pt 
+            //             LEFT JOIN tbl_users u ON pt.user_id = u.id 
+            //             LEFT JOIN tbl_roles r ON pt.role_id = r.id 
+            //             WHERE pt.project_id = p.id 
+            //         ) AS teams,
+            //         (SELECT COUNT(*) FROM tbl_tasks t WHERE t.project_id = p.id AND t.status = 1) AS total_doing,
+            //         (SELECT COUNT(*) FROM tbl_tasks t WHERE t.project_id = p.id AND t.status = 2) AS total_done
+            //     FROM tbl_projects p 
+            //     LEFT JOIN tbl_project_categories c ON p.category_id = c.id 
+            //     ${whereClause} 
+            //     ORDER BY p.created_at DESC 
+            //     LIMIT ${limit} OFFSET ${offset} 
+            // `;
+
             const selectQuery = `
                 SELECT DISTINCT 
                     p.id, p.name, p.description, p.user_id, p.start_date, p.end_date, 
                     (p.user_id = ${user_id}) as isMe,  
                     p.status, p.created_at, p.updated_at, 
                     p.category_id, c.name as category_name, 
-                    (
-                        SELECT JSON_ARRAYAGG(
-                            JSON_OBJECT(
-                                'user_id', pt.user_id,
-                                'full_name', u.full_name,
-                                'email', u.email,
-                                'role_id', pt.role_id,
-                                'role_name', r.name
-                            )
-                        )
-                        FROM tbl_project_team pt 
-                        LEFT JOIN tbl_users u ON pt.user_id = u.id 
-                        LEFT JOIN tbl_roles r ON pt.role_id = r.id 
-                        WHERE pt.project_id = p.id 
-                    ) AS teams,
                     (SELECT COUNT(*) FROM tbl_tasks t WHERE t.project_id = p.id AND t.status = 1) AS total_doing,
                     (SELECT COUNT(*) FROM tbl_tasks t WHERE t.project_id = p.id AND t.status = 2) AS total_done
                 FROM tbl_projects p 
                 LEFT JOIN tbl_project_categories c ON p.category_id = c.id 
+                
                 ${whereClause} 
                 ORDER BY p.created_at DESC 
                 LIMIT ${limit} OFFSET ${offset} 
@@ -93,39 +116,47 @@ class Services {
         }
     };
 
-
-
-
-
-
-
     // getbyid
     public getById = async (id: number) => {
         try {
             const query = `
-                SELECT p.id, p.name, p.description, p.user_id, p.start_date, p.end_date, p.status, p.created_at, p.updated_at, 
-                pr.goal, pr.budget, pr.currency, pr.duration p.category_id, c.name as category_name 
-                FROM ${this.tableName} p 
-                LEFT JOIN tbl_project_requests pr ON p.id = pr.project_id 
-                LEFT JOIN tbl_project_categories c ON p.category_id = c.id 
-                WHERE p.id =?
-            `;
+            SELECT 
+                p.id, 
+                p.name, 
+                p.description, 
+                p.user_id, 
+                p.start_date, 
+                p.end_date, 
+                p.status,
+                p.goal, 
+                p.created_at, 
+                p.updated_at, 
+                p.category_id, 
+                c.name as category_name,
+                (
+                    SELECT 
+                        JSON_ARRAYAGG(
+                            JSON_OBJECT(
+                                'role_id', ta.role_id,
+                                'role_name', r.name
+                            )
+                        )
+                    FROM tbl_tasks t 
+                    LEFT JOIN tbl_task_assignees ta ON t.id = ta.task_id 
+                    LEFT JOIN tbl_roles r ON ta.role_id = r.id 
+                    WHERE t.project_id = p.id AND ta.role_id IS NOT NULL
+                ) as roles
+            FROM ${this.tableName} p 
+            LEFT JOIN tbl_project_categories c ON p.category_id = c.id 
+            WHERE p.id = ?
+        `;
+
             const result = await database.executeQuery(query, [id]) as RowDataPacket[];
+
             if (result.length === 0) return new HttpException(400, messages.NOT_FOUND);
 
-            // Lấy danh sách team members của project này
-            const teamQuery = `
-                SELECT 
-                    pt.user_id, u.full_name, u.email, pt.role_id, r.name as role_name
-                FROM tbl_project_team pt
-                LEFT JOIN tbl_users u ON pt.user_id = u.id
-                LEFT JOIN tbl_roles r ON pt.role_id = r.id
-                WHERE pt.project_id = ?
-            `;
-            const teams = await database.executeQuery(teamQuery, [id]) as RowDataPacket[];
-
             return {
-                data: { ...result[0], budget: Number(result[0].budget), teams },
+                data: result[0],
             };
         } catch (error) {
             console.log(error);
@@ -133,17 +164,16 @@ class Services {
         }
     }
 
+
     public create = async (model: IModal, user_id: number) => {
         try {
-            // 1. Check if project name exists
             const exist = await checkExist(this.tableName, 'name', model.name);
             if (exist) return new HttpException(400, messages.NAME_EXISTED, 'name');
 
-            // 2. Create new project
             const queryProject = `
                 INSERT INTO ${this.tableName} 
-                (name, description, user_id, start_date, end_date, status, category_id,created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) 
+                (name, description, user_id, start_date, end_date, status, category_id, goal, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
             `;
 
             const projectValues = [
@@ -154,31 +184,19 @@ class Services {
                 model.end_date,
                 model.status || 1,
                 model.category_id,
+                model.goal || null,
             ];
 
             const result = await database.executeQuery(queryProject, projectValues) as RowDataPacket[0];
-
-            // 3. Create project request for the new project
             const projectId = result.insertId;
-            const queryInsertRequest = `
-                INSERT INTO tbl_project_requests 
-                (project_id, goal, budget, currency, duration)
-                VALUES (?, ?, ?, ?, ?)
-            `;
-            const requestValues = [
-                projectId,
-                model.goal,
-                model.budget,
-                model.currency,
-                model.duration,
-            ];
 
-            await database.executeQuery(queryInsertRequest, requestValues);
+            if (model.category_id) {
+                await this.insertDefaultTasksForProject(projectId, model.category_id);
+            }
 
             return {
                 message: messages.CREATE_SUCCESS,
             };
-
         } catch (error) {
             console.log(error);
             return new HttpException(400, messages.CREATE_FAILED);
@@ -188,13 +206,11 @@ class Services {
     // Update a project
     public update = async (model: IModal, id: number) => {
         try {
-            // 1. Kiểm tra project tồn tại
             const exist = await checkExist(this.tableName, 'id', id);
             if (!exist) {
                 return new HttpException(400, messages.NOT_FOUND);
             }
 
-            // 2. Cập nhật tbl_projects nếu có field tương ứng
             const setProject: string[] = [];
             const valuesProject: any[] = [];
 
@@ -222,10 +238,13 @@ class Services {
                 setProject.push('status = ?');
                 valuesProject.push(model.status);
             }
-
             if (model.category_id !== undefined) {
                 setProject.push('category_id = ?');
                 valuesProject.push(model.category_id);
+            }
+            if (model.goal !== undefined) {
+                setProject.push('goal = ?');
+                valuesProject.push(model.goal);
             }
 
             if (setProject.length > 0) {
@@ -239,41 +258,9 @@ class Services {
                 await database.executeQuery(queryProject, valuesProject);
             }
 
-            // 3. Cập nhật tbl_project_requests nếu có field tương ứng
-            const setRequest: string[] = [];
-            const valuesRequest: any[] = [];
-
-            if (model.goal !== undefined) {
-                setRequest.push('goal = ?');
-                valuesRequest.push(model.goal);
-            }
-            if (model.budget !== undefined) {
-                setRequest.push('budget = ?');
-                valuesRequest.push(model.budget);
-            }
-            if (model.currency !== undefined) {
-                setRequest.push('currency = ?');
-                valuesRequest.push(model.currency);
-            }
-            if (model.duration !== undefined) {
-                setRequest.push('duration = ?');
-                valuesRequest.push(model.duration);
-            }
-
-            if (setRequest.length > 0) {
-                const queryRequest = `
-                    UPDATE tbl_project_requests
-                    SET ${setRequest.join(', ')}
-                    WHERE project_id = ?
-                `;
-                valuesRequest.push(id);
-                await database.executeQuery(queryRequest, valuesRequest);
-            }
-
             return {
                 message: messages.UPDATE_SUCCESS,
             };
-
         } catch (error) {
             console.log(error);
             return new HttpException(400, messages.UPDATE_FAILED);
@@ -311,6 +298,43 @@ class Services {
             return new HttpException(400, messages.DELETE_FAILED);
         }
     }
+
+    private insertDefaultTasksForProject = async (projectId: number, category_id: number) => {
+        // 1. Lấy danh sách các task mặc định theo category_id
+        const checkCategory = await checkExist('tbl_project_categories', 'id', category_id) as RowDataPacket[];
+
+        const tasks = defaultTasksByKey[checkCategory[0]?.key] || [];
+        if (!tasks || tasks.length === 0) return;
+
+        const now = new Date();
+        const values: any[] = [];
+        const placeholders: string[] = [];
+
+        for (const task of tasks) {
+            placeholders.push("(?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?, ?, ?)");
+            values.push(
+                projectId,
+                task.name,
+                task.description || '',
+                null,                 // deadline
+                task.priority || 2,   // priority
+                1,                    // status
+                null,                 // start_time
+                null,                 // end_time
+                1,                    // publish
+                0,                    // progress_contractor
+                0                     // progress_supervisor
+            );
+        }
+
+        const query = `
+        INSERT INTO tbl_tasks 
+        (project_id, name, description, deadline, priority, status, start_time, end_time, created_at, updated_at, publish, progress_contractor, progress_supervisor)
+        VALUES ${placeholders.join(', ')}
+    `;
+
+        await database.executeQuery(query, values);
+    };
 
 
 

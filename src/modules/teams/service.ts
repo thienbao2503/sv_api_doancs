@@ -13,10 +13,23 @@ class Services {
     // add team to project
     public create = async (email: string, role_id: number, created_id: number) => {
         try {
+
+
             // 1. Kiểm tra user tồn tại
             const existUser = await checkExist("tbl_users", "email", email);
-            if (!existUser) return new HttpException(400, `Người dùng không tồn tại`);
+            if (!existUser) return new HttpException(400, `Người dùng không tồn tại`, `email`);
 
+            // Kiểm tra user đã tồn tại trong dự án chưa
+            const checkExistUserInProject = `
+                SELECT * FROM ${this.tableName}
+                WHERE user_id = ? AND created_id = ? AND is_delete = 0
+            `
+            const existUserInProject = await database.executeQuery(checkExistUserInProject, [existUser[0].id, created_id]) as RowDataPacket[];
+            if (existUserInProject.length > 0) return new HttpException(400, `Người dùng đã tồn tại trong dự án`, `user_id`);
+
+            // 2. Kiểm tra user tồn tại
+
+            if (existUser[0].id === created_id) return new HttpException(400, `Bạn không thể thêm chính mình vào dự án`, `user_id`);
             // 2. Kiểm tra role tồn tại
             const existRole = await checkExist("tbl_roles", "id", role_id);
             if (!existRole) return new HttpException(400, messages.ROLE_NOT_EXISTED);
@@ -26,13 +39,13 @@ class Services {
                 INSERT INTO ${this.tableName} (user_id, role_id, created_id, created_at, updated_at)
                 VALUES (?, ?, ?, NOW(), NOW())
             `;
-            await database.executeQuery(query, [existUser.id, role_id, created_id]);
+            await database.executeQuery(query, [existUser[0].id, role_id, created_id]);
             return {
                 message: messages.CREATE_SUCCESS,
             };
         } catch (error) {
             console.log(error);
-            return new HttpException(400, messages.CREATE_FAILED);
+            return new HttpException(400, messages.CREATE_FAILED, `email`);
         }
     };
     // update role of user in project
@@ -64,10 +77,10 @@ class Services {
             // kiểm tra id có tồn tại trong bảng tbl_project_team
             const existUser = await checkExist(this.tableName, "id", id);
             if (!existUser) return new HttpException(400, `Người dùng không tồn tại trong dự án`);
-            // update isDelete
+            // update is_delete
             const query = `
                 UPDATE ${this.tableName}
-                SET isDelete = 1, updated_at = NOW()
+                SET is_delete = 1, updated_at = NOW()
                 WHERE id = ?
             `;
             await database.executeQuery(query, [id]);
@@ -112,8 +125,8 @@ class Services {
 
             const selectQuery = `
                 SELECT 
-                    p.id, p.name, p.description, p.created_at, p.updated_at, 
-                    u.id as user_id, u.email as user_email, 
+                    p.id, p.created_at, p.updated_at, 
+                    u.id as user_id, u.email as user_email, u.full_name as username, 
                     r.id as role_id, r.name as role_name 
                 FROM ${this.tableName} p 
                 JOIN tbl_users u ON p.user_id = u.id 

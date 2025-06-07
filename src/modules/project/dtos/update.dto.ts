@@ -29,16 +29,5 @@ export class UpdateProjectDto {
     @IsString()
     goal?: string;
 
-    @IsOptional()
-    @IsNumber({}, { message: 'Ngân sách phải là số' })
-    budget?: number;
 
-    @IsOptional()
-    @IsString()
-    @Length(2, 3, { message: 'Mã tiền tệ phải từ 2 đến 3 ký tự' })
-    currency?: string;
-
-    @IsOptional()
-    @IsInt({ message: 'Thời gian dự kiến phải là số nguyên' })
-    duration?: number;
 }

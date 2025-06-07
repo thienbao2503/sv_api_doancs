@@ -8,6 +8,7 @@ import { RolesRoute } from "@modules/role";
 import { ProjectsRoute } from "@modules/project";
 import { TasksRoute } from "@modules/tasks";
 import { ProjectCategoryRoute } from "@modules/project_category";
+import { TeamsRoute } from "@modules/teams";
 
 
 const routes = [
@@ -16,7 +17,8 @@ const routes = [
     new RolesRoute(),
     new ProjectsRoute(),
     new TasksRoute(),
-    new ProjectCategoryRoute()
+    new ProjectCategoryRoute(),
+    new TeamsRoute(),
 ];
 const app = new App(routes);
 

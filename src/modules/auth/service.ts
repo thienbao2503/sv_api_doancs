@@ -3,7 +3,7 @@ import bcryptjs from 'bcryptjs';
 import database from "@core/config/database";
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { checkExist } from "@core/utils/checkExist";
-import messages from "@core/config/constants";
+import messages, { DEFAULT_PERMISSIONS } from "@core/config/constants";
 import { IModal } from "./model";
 import { RowDataPacket } from "mysql2";
 
@@ -42,7 +42,11 @@ class Services {
                 hashedPassword,
                 model.active || 'ACTIVE',
             ];
-            await database.executeQuery(queryInsert, values);
+            const result = await database.executeQuery(queryInsert, values) as RowDataPacket;
+            const created_id = result.insertId;
+            // Gọi tạo quyền mặc định cho user này
+            await this.createConfigRole(created_id);
+
             return {
                 message: 'Đăng ký tài khoản thành công',
             };
@@ -53,6 +57,28 @@ class Services {
             return new HttpException(400, messages.REGISTER_FAILED);
         }
     }
+
+    private createConfigRole = async (created_id: number) => {
+
+
+        const queryInsert = `
+            INSERT INTO tbl_role_config (role_id, created_id, value, created_at)
+            VALUES (?, ?, ?, NOW())
+        `;
+
+        const insertValues = [];
+
+        // Lặp qua tất cả quyền mặc định
+        for (const roleId in DEFAULT_PERMISSIONS) {
+            const value = JSON.stringify(DEFAULT_PERMISSIONS[roleId]);
+            insertValues.push([Number(roleId), created_id, value]);
+        }
+
+        // Thực hiện insert tất cả quyền 1 lần
+        for (const [role_id, created_id, value] of insertValues) {
+            await database.executeQuery(queryInsert, [role_id, created_id, value]);
+        }
+    };
 
     public login = async (model: IModal) => {
         try {

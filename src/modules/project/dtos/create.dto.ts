@@ -29,15 +29,4 @@ export class CreateProjectDto {
     @IsString()
     goal!: string;
 
-    @IsNotEmpty({ message: 'Ngân sách không được để trống' })
-    @IsNumber({}, { message: 'Ngân sách phải là số' })
-    budget!: number;
-
-    @IsNotEmpty({ message: 'Mã tiền tệ không được để trống' })
-    @IsString()
-    @Length(2, 3, { message: 'Mã tiền tệ phải từ 2 đến 3 ký tự' })
-    currency!: string;
-
-    @IsNotEmpty({ message: 'Thời gian dự kiến không được để trống' })
-    duration!: number;
 }

@@ -4,6 +4,7 @@ import { AuthMiddleware, errorMiddleware } from "@core/middleware";
 import Controller from "./controller";
 import { CreateProjectDto } from "./dtos/create.dto";
 import { UpdateProjectDto } from "./dtos/update.dto";
+import { PERMISSION_TYPE } from "@core/config/constants";
 
 export default class Route implements IRoute {
     public path = '/projects';
@@ -19,7 +20,7 @@ export default class Route implements IRoute {
 
         this.router.post(this.path + '/', errorMiddleware(CreateProjectDto, 'body'), AuthMiddleware.authorization(), this.controller.create);
         this.router.get(this.path + '/:id', AuthMiddleware.authorization(), this.controller.getById);
-        this.router.patch(this.path + '/:id', AuthMiddleware.authorization(), AuthMiddleware.checkRole("PROJECT", "UPDATE"), errorMiddleware(UpdateProjectDto, 'body'), this.controller.update);
+        this.router.patch(this.path + '/:id', AuthMiddleware.authorization(), AuthMiddleware.checkRole(PERMISSION_TYPE.UPDATE_PROJECT_INFO), errorMiddleware(UpdateProjectDto, 'body'), this.controller.update);
         // this.router.delete(this.path + '/:id', AuthMiddleware.authorization(), AuthMiddleware.checkRole("PROJECT", "UPDATE"), this.controller.delete);
         this.router.get(this.path + '/', AuthMiddleware.authorization(), this.controller.search);
 
