@@ -66,4 +66,29 @@ export default class Controller {
             next(error);
         }
     }
+
+    public create2FA = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const userId = req.id
+            const result = await this.service.create2FA(Number(userId));
+            if (result instanceof Error)
+                return sendResponse(res, result.status, result.message, null, result.field);
+            return sendResponse(res, 200, messages.UPDATE_SUCCESS, result);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    public verify2FA = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const userId = req.id
+            const model = req.body;
+            const result = await this.service.verify2FA(Number(userId), model.code);
+            if (result instanceof Error)
+                return sendResponse(res, result.status, result.message, null, result.field);
+            return sendResponse(res, 200, messages.UPDATE_SUCCESS, result);
+        } catch (error) {
+            next(error);
+        }
+    }
 }

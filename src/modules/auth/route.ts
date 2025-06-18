@@ -23,5 +23,9 @@ export default class Route implements IRoute {
         this.router.get(this.path + '/profile', AuthMiddleware.authorization(), this.controller.getProfile);
         this.router.patch(this.path + '/profile', errorMiddleware(UpdateDto, "body"), AuthMiddleware.authorization(), this.controller.updateProfile);
         this.router.patch(this.path + '/change-password', errorMiddleware(UpdatePasswordDto, "body"), AuthMiddleware.authorization(), this.controller.changePassword);
+        this.router.post(this.path + '/create2fa', AuthMiddleware.authorization(), this.controller.create2FA);
+        this.router.post(this.path + '/verify2fa', AuthMiddleware.authorization(), this.controller.verify2FA);
+
+
     }
 }

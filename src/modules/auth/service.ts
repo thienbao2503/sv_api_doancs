@@ -6,6 +6,8 @@ import { checkExist } from "@core/utils/checkExist";
 import messages, { DEFAULT_PERMISSIONS } from "@core/config/constants";
 import { IModal } from "./model";
 import { RowDataPacket } from "mysql2";
+import * as twofactor from 'node-2fa';
+
 
 
 
@@ -120,7 +122,7 @@ class Services {
     public getUserById = async (id: number) => {
         try {
             const query = `
-                SELECT id, full_name, email, phone, active, created_at, updated_at
+                SELECT id, full_name, email, phone, is2FA,active, created_at, updated_at
                 FROM ${this.tableName}
                 WHERE id = ?
             `;
@@ -173,30 +175,113 @@ class Services {
         }
     }
 
-    public changePassword = async (id: number, model: any) => {
+    public changePassword = async (id: number, model: { code: string; new_password: string }) => {
         try {
-            // Kiểm tra user tồn tại
-            const exist = await checkExist(this.tableName, 'id', id);
-            if (!exist) return new HttpException(400, messages.NOT_FOUND);
-            // Kiểm tra mật khẩu cũ
-            const user = (await checkExist(this.tableName, 'id', id))[0];
-            const isValidPassword = await bcryptjs.compare(model.old_password, user.password);
-            if (!isValidPassword) return new HttpException(400, messages.PASSWORD_INCORRECT, "password");
-            // Mã hóa mật khẩu mới
+            // 1. Kiểm tra user tồn tại
+            const users = await checkExist(this.tableName, 'id', id);
+            if (!users || users.length === 0) return new HttpException(400, messages.NOT_FOUND);
+
+            const user = users[0];
+
+            // 2. Kiểm tra user có bật 2FA không
+            const secret = user.secret_2fa;
+            if (!secret) return new HttpException(400, "Người dùng chưa bật 2FA");
+
+            // 3. Xác minh mã 2FA
+            const result = twofactor.verifyToken(secret, model.code);
+            if (!result || Math.abs(result.delta) > 1) {
+                return new HttpException(400, "Mã xác minh không hợp lệ hoặc đã hết hạn", "code");
+            }
+
+            // 4. Mã hóa mật khẩu mới
             const hashedPassword = await bcryptjs.hash(model.new_password, 10);
-            // Cập nhật mật khẩu mới
+
+            // 5. Cập nhật mật khẩu
             const query = `
-                UPDATE ${this.tableName}
-                SET password =?, updated_at = NOW()
-                WHERE id =?
-            `;
+            UPDATE ${this.tableName}
+            SET password = ?, updated_at = NOW()
+            WHERE id = ?
+        `;
             await database.executeQuery(query, [hashedPassword, id]);
+
             return {
                 message: 'Cập nhật mật khẩu thành công',
-            }
+            };
         } catch (error) {
             console.log(error);
             return new HttpException(400, messages.UPDATE_FAILED);
+        }
+    }
+
+    public create2FA = async (user_id: number) => {
+        try {
+            const user = (await checkExist(this.tableName, 'id', user_id))[0];
+            if (!user) return new HttpException(400, messages.USER_NOT_EXISTED, 'user');
+
+            const email = user.email;
+
+            let secret = user.secret_2fa || '';
+            let qr = null;
+
+            if (secret) {
+                // Manually construct the otpauth URI if secret exists
+                qr = `otpauth://totp/GET:${encodeURIComponent(email)}?secret=${secret}&issuer=ELEVATE`;
+            } else {
+                // If not, generate a new secret and URI
+                const newSecret = twofactor.generateSecret({
+                    name: 'GET',
+                    account: email
+                });
+                secret = newSecret.secret;
+                qr = newSecret.uri;
+
+                const queryUpdate = `
+                    UPDATE ${this.tableName}
+                    SET has_enabled = 1, secret_2fa = ? 
+                    WHERE id = ?
+                `;
+                await database.executeQuery(queryUpdate, [secret, user_id]);
+            }
+
+            return {
+                message: "Create 2FA successfully",
+                data: {
+                    qr: qr,
+                    secret: secret
+                }
+            }
+
+        } catch (error) {
+            console.error(error);
+            return new HttpException(400, "Create 2FA failed");
+        }
+    }
+
+    public verify2FA = async (id: number, code: string) => {
+        try {
+            const user = (await checkExist(this.tableName, 'id', id))[0];
+            if (!user) return new HttpException(400, messages.USER_NOT_EXISTED, 'user');
+
+            const secret = user.secret_2fa
+
+            if (!secret) return new HttpException(400, "2FA is not enabled for this user");
+
+            const verification = twofactor.verifyToken(secret, code);
+            if (!verification) return new HttpException(400, "2FA code is incorrect", "code");
+
+            const queryUpdate = `
+                UPDATE ${this.tableName}
+                SET is2FA = 1
+                WHERE id = ?
+            `;
+            await database.executeQuery(queryUpdate, [id]);
+
+            return {
+                message: "2FA verification successful",
+            };
+        } catch (error) {
+            console.error(error);
+            return new HttpException(400, "2FA verification failed");
         }
     }
 }
